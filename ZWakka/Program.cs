@@ -40,6 +40,8 @@ namespace ZWakka
             MyActorSystem = ActorSystem.Create("MyActorSystem");
             _serialPortHandlerActor = MyActorSystem.ActorOf(Props.Create(() => new SerialPortHandlerActor(serialPort)));
             _serialPortHandlerActor.Tell(new SerialPortHandlerActor.SendMessage(new byte[] { 0x01, 0x03, 0x00, 0x20 }));
+            _serialPortHandlerActor.Tell(new SerialPortHandlerActor.SendMessage(new byte[] { 0x01, 0x03, 0x00, 0x02 }));
+
 
             MyActorSystem.WhenTerminated.Wait();
             serialPort.Close();
@@ -96,12 +98,14 @@ namespace ZWakka
             {
                 result = new byte[0];
             }
-            
             if (result.Length != 0)
             {
                 _currentMessage = new List<byte>();
 
-                if (result[0] == 0x15) Console.WriteLine("Nack received !!!");
+                if (result[0] == 0x15)
+                {
+                    Console.WriteLine("Nack received !!!");
+                }
                 else if (result[0] == 0x06)
                 {
                     _serialPortHandlerActor.Tell(new SerialPortHandlerActor.AckReceived());

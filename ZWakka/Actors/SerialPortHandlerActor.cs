@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using System.IO.Ports;
 
@@ -50,14 +48,14 @@ namespace ZWakka.Actors
             Receive<SendMessage>(sm =>
             {
                 HandleSendMessage(sm);
-                Become(WaitingAckBehaviourBehaviour);
+                Become(WaitingAckBehaviour);
             });
             Receive<AckReceived>(sm => {
                 Console.WriteLine("unexpected ack");
             });
         }
 
-        private void WaitingAckBehaviourBehaviour()
+        private void WaitingAckBehaviour()
         {
             Receive<MessageReceived>(mr => Stash.Stash());
             Receive<SendMessage>(sm => Stash.Stash());
@@ -70,6 +68,36 @@ namespace ZWakka.Actors
         private void HandleMessageReceived(MessageReceived messageReceived)
         {
             Console.WriteLine($"Message received : {getDisplayableString(messageReceived.Message)}");
+
+
+            //dirty selection
+            if (messageReceived.Message[3] == 0x02)
+            {
+                var nodeIds = new List<int>();
+                var startPosition = 7;
+                var currentPos = startPosition;
+                var currentByte = messageReceived.Message[currentPos];
+                while (currentByte > 0)
+                {
+                    var bin = 1;
+                    for (var i = 1; i <= 8; i++)
+                    {
+                        if ((currentByte & bin) > 0)
+                            nodeIds.Add(8*(currentPos - startPosition) + i);
+                        bin *= 2;
+                    }
+                    currentPos++;
+                    currentByte = messageReceived.Message[currentPos];
+                }
+
+                nodeIds.ForEach(id =>
+                    {
+                        var message = new byte[] {0x01, 0x05, 0x00, 0x41, (byte)id, 0x31};
+                        Self.Tell(new SerialPortHandlerActor.SendMessage(message));
+                    }
+                );
+            }
+
 
             //TODO : route messages
         }

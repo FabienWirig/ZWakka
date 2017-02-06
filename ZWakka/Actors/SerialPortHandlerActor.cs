@@ -60,9 +60,22 @@ namespace ZWakka.Actors
             Receive<MessageReceived>(mr => Stash.Stash());
             Receive<SendMessage>(sm => Stash.Stash());
             Receive<AckReceived>(sm => {
-                Become(NormalBehaviour);
+                Become(WaitingResponseBehaviour);
                 Stash.UnstashAll();
             });
+        }
+
+        private void WaitingResponseBehaviour()
+        {
+            Receive<MessageReceived>(mr =>
+            {
+                HandleMessageReceived(mr);
+                Become(NormalBehaviour);
+                Stash.UnstashAll();
+
+            });
+            Receive<SendMessage>(sm => Stash.Stash());
+            Receive<AckReceived>(sm => Stash.Stash());
         }
 
         private void HandleMessageReceived(MessageReceived messageReceived)
